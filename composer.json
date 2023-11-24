@@ -1,7 +1,9 @@
 {
     "name": "discoverygarden/iiif_content_search_api",
     "type": "drupal-module",
-    "require": {},
+    "require": {
+        "drupal/search_api": "^1"
+    },
     "suggest": {
         "discoverygarden/islandora_hocr": "HOCR indexing and search helpers",
         "discoverygarden/iiif_presentation_api": "IIIF Presentation API",
