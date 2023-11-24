@@ -16,6 +16,7 @@ function iiif_content_search_api_entity_type_build(array &$entity_types) {
       continue;
     }
 
+    $entity_type->setLinkTemplate('iiif-content-search.v1', "{$canonical_template}/iiif-cs/1");
     $entity_type->setLinkTemplate('iiif-content-search.v2', "{$canonical_template}/iiif-cs/2");
 
     // Default endpoint.

@@ -1,13 +1,11 @@
 <?php
 
-namespace Drupal\iiif_content_search_api\Controller\V2;
+namespace Drupal\iiif_content_search_api\Controller\V1;
 
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Url;
-use Drupal\node\NodeInterface;
 use Drupal\search_api\Entity\Index;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -44,7 +42,6 @@ class Search extends ControllerBase {
     $used = array_intersect_key($all, $used_keys);
 
     $query_string = $used['q'];
-    $motivation = $used['motivation'];
     $page_size = $used['page_size'];
     $page = $used['page'];
 
@@ -69,41 +66,28 @@ class Search extends ControllerBase {
     $max_page = intdiv($result_count, $page_size);
 
     $data = [
-      '@context' => 'http://iiif.io/api/search/2/context.json',
-      'id' => static::createIdUrl($request, $used)->toString(),
-      'type' => 'AnnotationPage',
+      '@context' => 'http://iiif.io/api/presentation/2/context.json',
+      '@id' => static::createIdUrl($request, $used)->toString(),
+      '@type' => 'sc:AnnotationList',
       'ignored' => array_keys($unused),
-      'partOf' => [
+      'within' => [
         'id' => static::createIdUrl($request, ['page' => FALSE] + $used)->toString(),
-        'type' => 'AnnotationCollection',
+        '@type' => 'sc:Layer',
         'total' => $result_count,
-        'first' => [
-          'id' => static::createIdUrl($request, ['page' => 0] + $used)->toString(),
-          'type' => 'AnnotationPage',
-        ],
-        'last' => [
-          'id' => static::createIdUrl($request, ['page' => $max_page] + $used)->toString(),
-          'type' => 'AnnotationPage',
-        ],
+        'first' => static::createIdUrl($request, ['page' => 0] + $used)->toString(),
+        'last' => static::createIdUrl($request, ['page' => $max_page] + $used)->toString(),
       ],
       'startIndex' => $page_size * $page,
     ];
 
     if ($page > 0) {
-      $data['prev'] = [
-        'id' => static::createIdUrl($request, ['page' => $page - 1] + $used)->toString(),
-        'type' => 'AnnotationPage',
-      ];
+      $data['prev'] = static::createIdUrl($request, ['page' => $page - 1] + $used)->toString();
     }
     if ($max_page > $page) {
-      $data['next'] = [
-        'id' => static::createIdUrl($request, ['page' => $page + 1] + $used)->toString(),
-        'type' => 'AnnotationPage',
-      ];
+      $data['next'] = static::createIdUrl($request, ['page' => $page + 1] + $used)->toString();
     }
 
-    $data['items'] = [];
-    $data['annotations'] = [];
+    $data['resources'] = [];
 
     // Get the additionally-populated property info, so we can identify what fields from the highlighted results correspond to which property.
     $info = $results->getQuery()->getOption('islandora_hocr_properties');
@@ -115,39 +99,45 @@ class Search extends ControllerBase {
     foreach ($results as $result) {
       $highlights = $result->getExtraData('islandora_hocr_highlights');
 
+      /** @var \Drupal\Core\Entity\Plugin\DataType\EntityAdapter $adapter */
+      $adapter = $result->getOriginalObject();
+
       /** @var \Drupal\Core\Entity\ContentEntityInterface $original */
-      $original = $result->getOriginalObject();
+      $original = $adapter->getEntity();
+
+      if (!$original) {
+        continue;
+      }
 
       foreach ($language_fields as $field) {
         $field_info = $highlights[$field];
         foreach ($field_info['snippets'] as $snippet_index => $snippet) {
           foreach ($snippet['highlights'] as $highlight_group_index => $highlights) {
             foreach($highlights as $highlight_index => $highlight) {
-              $data['items'][] = [
-                'id' => "{$result->getId()}/{$field}/{$snippet_index}/{$highlight_group_index}/{$highlight_index}",
-                'type' => 'Annotation',
-                'motivation' => $motivation,
-                'body' => [
-                  'type' => 'TextualBody',
-                  'value' => $highlight['text'],
-                  'format' => 'text/plain',
+              $data['resources'][] = [
+                '@id' => "{$result->getId()}/{$field}/{$snippet_index}/{$highlight_group_index}/{$highlight_index}",
+                '@type' => 'Annotation',
+                'motivation' => 'sc:Painting',
+                'resource' => [
+                  '@type' => 'cnt:ContentAsText',
+                  'chars' => $highlight['text'],
                 ],
-                // @todo Generate the URL to the original object.
-                'target' => Url::fromRoute("entity.{$parameter_name}.iiif-p.canvas", [
-                  $parameter_name => $_entity->id(),
-                  'canvas_type' => $original->getEntityTypeId(),
-                  'canvas_id' => $original->id(),
-                ])->setAbsolute()->toString(),
-//                'target' => $original instanceof EntityInterface ?
-//                  $original->toUrl('canonical', [
-//                    'fragment' => 'xywh=' . implode(',', [
-//                      $highlight['ulx'],
-//                      $highlight['uly'],
-//                      $highlight['lrx'] - $highlight['ulx'],
-//                      $highlight['lry'] - $highlight['uly'],
-//                    ]),
-//                  ]):
-//                  '',
+                'on' => Url::fromRoute(
+                  "entity.{$parameter_name}.iiif_p.canvas",
+                  [
+                    $parameter_name => $_entity->id(),
+                    'canvas_type' => $original->getEntityTypeId(),
+                    'canvas_id' => $original->id(),
+                  ],
+                  [
+                    'fragment' => 'xywh=' . implode(',', [
+                      $highlight['ulx'],
+                      $highlight['uly'],
+                      $highlight['lrx'] - $highlight['ulx'],
+                      $highlight['lry'] - $highlight['uly'],
+                    ]),
+                  ]
+                )->setAbsolute()->toString(),
               ];
             }
           }

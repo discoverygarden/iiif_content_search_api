@@ -1,12 +1,12 @@
 <?php
 
-namespace Drupal\iiif_content_search_api\EventSubscriber\V2;
+namespace Drupal\iiif_content_search_api\EventSubscriber\V1;
 
 use Drupal\iiif_presentation_api\Event\V3\ContentEntityExtrasEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
- * Event subscriber integrating IIIF-CS v2 into IIIF-P v3.
+ * Event subscriber integrating IIIF-CS v1 into IIIF-P v3.
  */
 class IiifPresentationV3EventSubscriber implements EventSubscriberInterface {
 
@@ -34,10 +34,12 @@ class IiifPresentationV3EventSubscriber implements EventSubscriberInterface {
     }
 
     $event->addExtra('service', [
-      'id' => $object->toUrl('iiif-content-search.v2')
+      "@context" => "http://iiif.io/api/search/1/context.json",
+      "profile" => "http://iiif.io/api/search/1/search",
+      '@id' => $object->toUrl('iiif-content-search.v1')
         ->setAbsolute()
         ->toString(),
-      'type' => 'SearchService2',
+      'type' => 'SearchService1',
     ]);
   }
 
