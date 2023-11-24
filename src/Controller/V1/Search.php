@@ -9,7 +9,7 @@ use Drupal\search_api\Query\ResultSetInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Search controller.
+ * IIIF Content Search V1 controller.
  */
 class Search extends AbstractSearchController {
 
@@ -59,7 +59,7 @@ class Search extends AbstractSearchController {
         $field_info = $highlights[$field];
         foreach ($field_info['snippets'] as $snippet_index => $snippet) {
           foreach ($snippet['highlights'] as $highlight_group_index => $highlights) {
-            foreach($highlights as $highlight_index => $highlight) {
+            foreach ($highlights as $highlight_index => $highlight) {
               $data['resources'][] = [
                 '@id' => "{$result->getId()}/{$field}/{$snippet_index}/{$highlight_group_index}/{$highlight_index}",
                 '@type' => 'Annotation',
@@ -77,11 +77,11 @@ class Search extends AbstractSearchController {
                   ],
                   [
                     'fragment' => 'xywh=' . implode(',', [
-                        $highlight['ulx'],
-                        $highlight['uly'],
-                        $highlight['lrx'] - $highlight['ulx'],
-                        $highlight['lry'] - $highlight['uly'],
-                      ]),
+                      $highlight['ulx'],
+                      $highlight['uly'],
+                      $highlight['lrx'] - $highlight['ulx'],
+                      $highlight['lry'] - $highlight['uly'],
+                    ]),
                   ]
                 )->setAbsolute()->toString(),
               ];

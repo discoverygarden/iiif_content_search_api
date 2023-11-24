@@ -4,11 +4,16 @@ namespace Drupal\iiif_content_search_api\Routing;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Routing\RouteSubscriberBase;
-use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 
+/**
+ * Dynamic route generation.
+ */
 class RouteSubscriber extends RouteSubscriberBase {
 
+  /**
+   * Constructor.
+   */
   public function __construct(
     protected EntityTypeManagerInterface $entityTypeManager,
   ) {
@@ -55,8 +60,7 @@ class RouteSubscriber extends RouteSubscriberBase {
 
       // Set the IIIF Content Search v2 route as the "default" route.
       $default_route = (clone $cs2_route)
-        ->setPath("{$canonical_route->getPath()}/iiif-cs")
-      ;
+        ->setPath("{$canonical_route->getPath()}/iiif-cs");
       $collection->add("entity.{$id}.iiif_content_search", $default_route);
     }
   }

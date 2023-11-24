@@ -9,7 +9,7 @@ use Drupal\search_api\Query\ResultSetInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Search controller.
+ * IIIF Content Search V2 controller.
  */
 class Search extends AbstractSearchController {
 
@@ -55,12 +55,6 @@ class Search extends AbstractSearchController {
     $data['items'] = [];
     $data['annotations'] = [];
 
-    // Get the additionally-populated property info, so we can identify what fields from the highlighted results correspond to which property.
-    $info = $results->getQuery()->getOption('islandora_hocr_properties');
-    // This should be an associative array mapping language codes to Solr fields,
-    // which can then be found in the $highlights below.
-    $language_fields = $info['islandora_hocr_field']['language_fields'];
-
     /** @var \Drupal\search_api\Item\ItemInterface $result */
     foreach ($results as $result) {
       $highlights = $result->getExtraData('islandora_hocr_highlights');
@@ -75,11 +69,11 @@ class Search extends AbstractSearchController {
         continue;
       }
 
-      foreach ($language_fields as $field) {
+      foreach ($this->getLanguageFields($results) as $field) {
         $field_info = $highlights[$field];
         foreach ($field_info['snippets'] as $snippet_index => $snippet) {
           foreach ($snippet['highlights'] as $highlight_group_index => $highlights) {
-            foreach($highlights as $highlight_index => $highlight) {
+            foreach ($highlights as $highlight_index => $highlight) {
               $data['items'][] = [
                 'id' => "{$result->getId()}/{$field}/{$snippet_index}/{$highlight_group_index}/{$highlight_index}",
                 'type' => 'Annotation',
@@ -89,7 +83,6 @@ class Search extends AbstractSearchController {
                   'value' => $highlight['text'],
                   'format' => 'text/plain',
                 ],
-                // @todo Generate the URL to the original object.
                 'target' => Url::fromRoute(
                   "entity.{$_entity->getEntityTypeId()}.iiif_p.canvas",
                   [
@@ -99,11 +92,11 @@ class Search extends AbstractSearchController {
                   ],
                   [
                     'fragment' => 'xywh=' . implode(',', [
-                        $highlight['ulx'],
-                        $highlight['uly'],
-                        $highlight['lrx'] - $highlight['ulx'],
-                        $highlight['lry'] - $highlight['uly'],
-                      ]),
+                      $highlight['ulx'],
+                      $highlight['uly'],
+                      $highlight['lrx'] - $highlight['ulx'],
+                      $highlight['lry'] - $highlight['uly'],
+                    ]),
                   ]
                 )->setAbsolute()->toString(),
               ];

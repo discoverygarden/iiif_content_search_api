@@ -11,8 +11,17 @@ use Drupal\search_api\Query\ResultSetInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
+/**
+ * Abstract search controller to minimize copypasta.
+ */
 abstract class AbstractSearchController extends ControllerBase {
 
+  /**
+   * Get the index from which to query highlighting results.
+   *
+   * @return \Drupal\search_api\Entity\Index
+   *   The index from which to query highlighting results.
+   */
   protected function getIndex() : Index {
     // @todo Change up/drop the default.
     $index_id = getenv('IIIF_CONTENT_SEARCH_INDEX_ID') ?: 'default_solr_index';
@@ -20,10 +29,22 @@ abstract class AbstractSearchController extends ControllerBase {
     return Index::load($index_id);
   }
 
+  /**
+   * Get the field use to generate highlighting results.
+   *
+   * @return string
+   *   The name of the field used for highlighting results.
+   */
   protected function getHighlightingField() : string {
     return getenv('IIIF_CONTENT_SEARCH_HIGHLIGHTING_FIELD') ?: 'islandora_hocr_field';
   }
 
+  /**
+   * Get the ancestor field to use to filter.
+   *
+   * @return string
+   *   The name of the ancestor field.
+   */
   protected function getAncestorField() : string {
     return getenv('IIIF_CONTENT_SEARCH_ANCESTOR_FIELD') ?: 'field_ancestors';
   }
@@ -39,22 +60,21 @@ abstract class AbstractSearchController extends ControllerBase {
    *   The route matched for the request.
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
-   * @throws \Drupal\Core\Entity\EntityMalformedException
-   * @throws \Drupal\search_api\SearchApiException
+   *   The JSON response.
    */
   public function search(string $parameter_name, Request $request, RouteMatchInterface $route_match) {
     /** @var \Drupal\Core\Entity\EntityInterface $_entity */
     $_entity = $route_match->getParameter($parameter_name);
     $all = $request->query->all() + [
-        'motivation' => 'highlighting',
-        'page_size' => 100,
-        'page' => 0,
-      ];
+      'motivation' => 'highlighting',
+      'page_size' => 100,
+      'page' => 0,
+    ];
     $used_keys = array_fill_keys([
       'q',
       'motivation',
       'page_size',
-      'page'
+      'page',
     ], TRUE);
     $unused = array_diff_key($all, $used_keys);
     $used = array_intersect_key($all, $used_keys);
@@ -169,10 +189,11 @@ abstract class AbstractSearchController extends ControllerBase {
    *   The list of language-specific variants.
    */
   protected function getLanguageFields(ResultSetInterface $results) : array {
-    // Get the additionally-populated property info, so we can identify what fields from the highlighted results correspond to which property.
+    // Get the additionally-populated property info, so we can identify what
+    // fields from the highlighted results correspond to which property.
     $info = $results->getQuery()->getOption('islandora_hocr_properties');
-    // This should be an associative array mapping language codes to Solr fields,
-    // which can then be found in the $highlights below.
+    // This should be an associative array mapping language codes to Solr
+    // fields, which can then be found in the $highlights below.
     return $info[$this->getHighlightingField()]['language_fields'];
   }
 
