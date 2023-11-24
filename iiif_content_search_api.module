@@ -1,0 +1,25 @@
+<?php
+
+/**
+ * @file
+ * General hook implementations.
+ */
+
+/**
+ * Implements hook_entity_type_build().
+ */
+function iiif_content_search_api_entity_type_build(array &$entity_types) {
+  /** @var \Drupal\Core\Entity\EntityTypeInterface $entity_type */
+  foreach ($entity_types as $entity_type) {
+    $canonical_template = $entity_type->getLinkTemplate('canonical');
+    if (!$canonical_template) {
+      continue;
+    }
+
+    $entity_type->setLinkTemplate('iiif-content-search.v2', "{$canonical_template}/iiif-cs/2");
+
+    // Default endpoint.
+    $entity_type->setLinkTemplate('iiif-content-search', "{$canonical_template}/iiif-cs");
+  }
+  unset($entity_type);
+}

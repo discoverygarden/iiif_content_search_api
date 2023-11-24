@@ -1,0 +1,14 @@
+---
+services:
+  iiif_content_search_api.route_subscriber:
+    class: Drupal\iiif_content_search_api\Routing\RouteSubscriber
+    arguments:
+      - '@entity_type.manager'
+    tags:
+      - { name: event_subscriber }
+
+  iiif_content_search_api.v2.search_controller:
+    class: Drupal\iiif_content_search_api\Controller\V2\Search
+    factory: [null, create]
+    arguments:
+      - '@service_container'
