@@ -50,6 +50,16 @@ abstract class AbstractSearchController extends ControllerBase {
   }
 
   /**
+   * Get the name of the field of which to search for the current entity itself.
+   *
+   * @return string
+   *   The name of the ID field.
+   */
+  protected function getDocIdField() : string  {
+    return getenv('IIIF_CONTENT_SEARCH_DOC_ID_FIELD') ?: 'nid';
+  }
+
+  /**
    * Route content callback.
    *
    * @param string $parameter_name
@@ -87,7 +97,10 @@ abstract class AbstractSearchController extends ControllerBase {
 
     $query->keys($query_string);
 
-    $query->addCondition($this->getAncestorField(), $_entity->id());
+    $or = $query->createConditionGroup('OR');
+    $or->addCondition($this->getAncestorField(), $_entity->id());
+    $or->addCondition($this->getDocIdField(), $_entity->id());
+    $query->addConditionGroup($or);
     $query->setOption('islandora_hocr_properties', [
       $this->getHighlightingField() => [],
     ]);
