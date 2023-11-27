@@ -45,6 +45,10 @@ class Search extends AbstractSearchController {
     foreach ($results as $result) {
       $highlights = $result->getExtraData('islandora_hocr_highlights');
 
+      if (empty($highlights)) {
+        continue;
+      }
+
       /** @var \Drupal\Core\Entity\Plugin\DataType\EntityAdapter $adapter */
       $adapter = $result->getOriginalObject();
 
@@ -56,6 +60,9 @@ class Search extends AbstractSearchController {
       }
 
       foreach ($this->getLanguageFields($results) as $field) {
+        if (empty($highlights[$field])) {
+          continue;
+        }
         $field_info = $highlights[$field];
         foreach ($field_info['snippets'] as $snippet_index => $snippet) {
           foreach ($snippet['highlights'] as $highlight_group_index => $highlights) {
