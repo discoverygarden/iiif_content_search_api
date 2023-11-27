@@ -20,11 +20,12 @@ Suggested (at least to reference) are:
 
 Configuration is presented performed via environment variables.
 
-| Variable | Default | Description |
-| --- | --- | ---|
-| `IIIF_CONTENT_SEARCH_INDEX_ID` | `default_solr_index` | The index in which to search. |
-| `IIIF_CONTENT_SEARCH_HIGHLIGHTING_FIELD` | `islandora_hocr_field` | The field of the index in which to attempt to perform highlighting. |
-| `IIIF_CONTENT_SEARCH_ANCESTOR_FIELD` | `field_ancestors` | The field of the index to filter using the ID relative to which the given query is to be performed. |
+| Variable | Default | Description                                                                                                                                                        |
+| --- | --- |--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `IIIF_CONTENT_SEARCH_INDEX_ID` | `default_solr_index` | The index in which to search.                                                                                                                                      |
+| `IIIF_CONTENT_SEARCH_HIGHLIGHTING_FIELD` | `islandora_hocr_field` | The field of the index in which to attempt to perform highlighting.                                                                                                |
+| `IIIF_CONTENT_SEARCH_ANCESTOR_FIELD` | `field_ancestors` | The field of the index to filter using the ID relative to which the given query is to be performed, for searching with structured content (such as paged content). |
+| `IIIF_CONTENT_SEARCH_DOC_ID_FIELD` | `nid` | Field of the index to search for the item proper, should it contain any highlight response. (Only relevant when searching on a particular page/image)              |
 
 ## Installation
 
