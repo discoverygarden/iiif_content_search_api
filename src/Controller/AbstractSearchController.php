@@ -55,7 +55,7 @@ abstract class AbstractSearchController extends ControllerBase {
    * @return string
    *   The name of the ID field.
    */
-  protected function getDocIdField() : string  {
+  protected function getDocIdField() : string {
     return getenv('IIIF_CONTENT_SEARCH_DOC_ID_FIELD') ?: 'nid';
   }
 
