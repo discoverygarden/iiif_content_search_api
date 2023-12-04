@@ -1,0 +1,27 @@
+---
+services:
+  iiif_content_search_api.route_subscriber:
+    class: Drupal\iiif_content_search_api\Routing\RouteSubscriber
+    arguments:
+      - '@entity_type.manager'
+    tags:
+      - { name: event_subscriber }
+  iiif_content_search_api.v1.iiif_p_subscriber:
+    class: Drupal\iiif_content_search_api\EventSubscriber\V1\IiifPresentationV3EventSubscriber
+    tags:
+      - { name: event_subscriber }
+  iiif_content_search_api.v2.iiif_p_subscriber:
+    class: Drupal\iiif_content_search_api\EventSubscriber\V2\IiifPresentationV3EventSubscriber
+    tags:
+      - { name: event_subscriber }
+
+  iiif_content_search_api.v1.search_controller:
+    class: Drupal\iiif_content_search_api\Controller\V1\Search
+    factory: [null, create]
+    arguments:
+      - '@service_container'
+  iiif_content_search_api.v2.search_controller:
+    class: Drupal\iiif_content_search_api\Controller\V2\Search
+    factory: [null, create]
+    arguments:
+      - '@service_container'

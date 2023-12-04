@@ -1,0 +1,8 @@
+---
+name: IIIF Content Search API
+type: module
+description: 'Provides a IIIF Content Search API implementation for Drupal entities.'
+package: DGI
+core_version_requirement: ^10
+dependencies:
+  - search_api:search_api
