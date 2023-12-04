@@ -1,0 +1,11 @@
+---
+name: Code Linting
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  Lint:
+    uses: discoverygarden/CodeSniffer/.github/workflows/lint.yml@v1

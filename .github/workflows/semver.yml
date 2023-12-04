@@ -1,0 +1,12 @@
+---
+name: Semantic Version Tagging
+on:
+  pull_request_target:
+    types: closed
+    branches:
+      - main
+
+jobs:
+  tag_update:
+    name: Tag Update
+    uses: discoverygarden/auto-semver/.github/workflows/semver.yml@v1
