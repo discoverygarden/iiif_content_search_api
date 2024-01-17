@@ -36,7 +36,7 @@ class IiifPresentationV3EventSubscriber implements EventSubscriberInterface {
     $event->addExtra('service', [
       "@context" => "http://iiif.io/api/search/1/context.json",
       "profile" => "http://iiif.io/api/search/1/search",
-      '@id' => $object->toUrl('iiif-content-search.v1')
+      'id' => $object->toUrl('iiif-content-search.v1')
         ->setAbsolute()
         ->toString(),
       'type' => 'SearchService1',
