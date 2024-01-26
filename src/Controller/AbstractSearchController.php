@@ -111,21 +111,24 @@ abstract class AbstractSearchController extends ControllerBase {
     $result_count = $results->getResultCount();
     $max_page = intdiv($result_count, $page_size);
 
-    return new JsonResponse($this->processResults(
-      $_entity,
-      $used,
-      $unused,
-      $result_count,
-      $page,
-      $page_size,
-      $max_page,
-      $results,
-      $request,
-    ), headers: [
-      'Access-Control-Allow-Credentials' => 'true',
-      'Access-Control-Allow-Origin' => '*',
-      'Access-Control-Allow-Methods' => 'GET',
-    ]);
+    return new JsonResponse(
+      $this->processResults(
+        $_entity,
+        $used,
+        $unused,
+        $result_count,
+        $page,
+        $page_size,
+        $max_page,
+        $results,
+        $request,
+      ),
+      headers: [
+        'Access-Control-Allow-Credentials' => 'true',
+        'Access-Control-Allow-Origin' => '*',
+        'Access-Control-Allow-Methods' => 'GET',
+      ],
+    );
   }
 
   /**
