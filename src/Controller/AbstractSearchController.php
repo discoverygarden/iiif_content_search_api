@@ -121,7 +121,11 @@ abstract class AbstractSearchController extends ControllerBase {
       $max_page,
       $results,
       $request,
-    ));
+    ), headers: [
+      'Access-Control-Allow-Credentials' => 'true',
+      'Access-Control-Allow-Origin' => '*',
+      'Access-Control-Allow-Methods' => 'GET',
+    ]);
   }
 
   /**
