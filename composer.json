@@ -1,6 +1,7 @@
 {
     "name": "discoverygarden/iiif_content_search_api",
     "type": "drupal-module",
+    "license": "GPL-3.0-only",
     "require": {
         "drupal/search_api": "^1"
     },
