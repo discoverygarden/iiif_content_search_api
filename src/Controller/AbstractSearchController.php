@@ -2,19 +2,31 @@
 
 namespace Drupal\iiif_content_search_api\Controller;
 
+use Drupal\Core\Cache\CacheableJsonResponse;
+use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Render\RenderContext;
+use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Url;
 use Drupal\search_api\Entity\Index;
 use Drupal\search_api\Query\ResultSetInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Abstract search controller to minimize copypasta.
  */
 abstract class AbstractSearchController extends ControllerBase {
+
+  /**
+   * Drupal's renderer service.
+   *
+   * @var \Drupal\Core\Render\RendererInterface
+   */
+  protected RendererInterface $renderer;
 
   /**
    * Get the index from which to query highlighting results.
@@ -73,62 +85,84 @@ abstract class AbstractSearchController extends ControllerBase {
    *   The JSON response.
    */
   public function search(string $parameter_name, Request $request, RouteMatchInterface $route_match) {
-    /** @var \Drupal\Core\Entity\EntityInterface $_entity */
-    $_entity = $route_match->getParameter($parameter_name);
-    $all = $request->query->all() + [
-      'motivation' => 'highlighting',
-      'page_size' => 100,
-      'page' => 0,
-    ];
-    $used_keys = array_fill_keys([
-      'q',
-      'motivation',
-      'page_size',
-      'page',
-    ], TRUE);
-    $unused = array_diff_key($all, $used_keys);
-    $used = array_intersect_key($all, $used_keys);
+    $context = new RenderContext();
 
-    $query_string = $used['q'];
-    $page_size = $used['page_size'];
-    $page = $used['page'];
+    /** @var \Drupal\Core\Cache\CacheableJsonResponse $response */
+    $response = $this->renderer->executeInRenderContext($context, function () use ($parameter_name, $request, $route_match) {
+      $cache_meta = new CacheableMetadata();
+      $cache_meta->addCacheContexts(['route']);
 
-    $query = $this->getIndex()->query();
+      /** @var \Drupal\Core\Entity\EntityInterface $_entity */
+      $_entity = $route_match->getParameter($parameter_name);
+      $cache_meta->addCacheableDependency($_entity);
+      $all = $request->query->all() + [
+        'motivation' => 'highlighting',
+        'page_size' => 100,
+        'page' => 0,
+      ];
+      $relevant_query_parameters = [
+        'q',
+        'motivation',
+        'page_size',
+        'page',
+      ];
+      $used_keys = array_fill_keys($relevant_query_parameters, TRUE);
+      $unused = array_diff_key($all, $used_keys);
+      $used = array_intersect_key($all, $used_keys);
 
-    $query->keys($query_string);
+      $cache_meta->addCacheContexts(array_map(function ($param) {
+        return "url.query_args:{$param}";
+      }, $relevant_query_parameters));
 
-    $or = $query->createConditionGroup('OR');
-    $or->addCondition($this->getAncestorField(), $_entity->id());
-    $or->addCondition($this->getDocIdField(), $_entity->id());
-    $query->addConditionGroup($or);
-    $query->setOption('islandora_hocr_properties', [
-      $this->getHighlightingField() => [],
-    ]);
-    $query->range($page * $page_size, $page_size);
+      $query_string = $used['q'];
+      $page_size = $used['page_size'];
+      $page = $used['page'];
 
-    $results = $query->execute();
+      $query = $this->getIndex()->query();
 
-    $result_count = $results->getResultCount();
-    $max_page = intdiv($result_count, $page_size);
+      $query->keys($query_string);
 
-    return new JsonResponse(
-      $this->processResults(
-        $_entity,
-        $used,
-        $unused,
-        $result_count,
-        $page,
-        $page_size,
-        $max_page,
-        $results,
-        $request,
-      ),
-      headers: [
-        'Access-Control-Allow-Credentials' => 'true',
-        'Access-Control-Allow-Origin' => '*',
-        'Access-Control-Allow-Methods' => 'GET',
-      ],
-    );
+      $or = $query->createConditionGroup('OR');
+      $or->addCondition($this->getAncestorField(), $_entity->id());
+      $or->addCondition($this->getDocIdField(), $_entity->id());
+      $query->addConditionGroup($or);
+      $query->setOption('islandora_hocr_properties', [
+        $this->getHighlightingField() => [],
+      ]);
+      $query->range($page * $page_size, $page_size);
+
+      $results = $query->execute();
+
+      $result_count = $results->getResultCount();
+      $max_page = intdiv($result_count, $page_size);
+
+      return new CacheableJsonResponse(
+        $this->processResults(
+          $_entity,
+          $used,
+          $unused,
+          $result_count,
+          $page,
+          $page_size,
+          $max_page,
+          $results,
+          $request,
+          $cache_meta,
+        ),
+        headers: [
+          'Access-Control-Allow-Credentials' => 'true',
+          'Access-Control-Allow-Origin' => '*',
+          'Access-Control-Allow-Methods' => 'GET',
+        ],
+      );
+    });
+
+    if (!$context->isEmpty()) {
+      $metadata = $context->pop();
+      $response->addCacheableDependency($metadata);
+    }
+
+    return $response;
   }
 
   /**
@@ -152,6 +186,8 @@ abstract class AbstractSearchController extends ControllerBase {
    *   The set of results.
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request being served.
+   * @param \Drupal\Core\Cache\RefinableCacheableDependencyInterface $cache_meta
+   *   Cacheable metadata, if we wish to add any.
    *
    * @return array
    *   The processed result structure in an array, ready to be turned into JSON.
@@ -166,6 +202,7 @@ abstract class AbstractSearchController extends ControllerBase {
     int $max_page,
     ResultSetInterface $results,
     Request $request,
+    RefinableCacheableDependencyInterface $cache_meta,
   ) : array;
 
   /**
@@ -232,6 +269,69 @@ abstract class AbstractSearchController extends ControllerBase {
     return Url::createFromRequest($request)
       ->setAbsolute()
       ->setOption('query', $query_params);
+  }
+
+  /**
+   * Helper; deal with cacheable metadata.
+   *
+   * @see ::createIdUrl()
+   *
+   * @return string
+   *   The URL as a string.
+   */
+  protected static function createIdUrlString(Request $request, array $query_params, RefinableCacheableDependencyInterface $cache_meta) : string {
+    $url = static::createIdUrl($request, $query_params);
+    $generated_url = $url->toString(TRUE);
+    $cache_meta->addCacheableDependency($generated_url);
+    return $generated_url->getGeneratedUrl();
+  }
+
+  /**
+   * Helper; build out highlighting fragment URLs.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $_entity
+   *   The manifest entity.
+   * @param \Drupal\Core\Entity\EntityInterface $original
+   *   The canvas entity.
+   * @param array $highlight
+   *   Array of highlight info.
+   * @param \Drupal\Core\Cache\RefinableCacheableDependencyInterface $cache_meta
+   *   Cacheable metadata to which to add.
+   *
+   * @return string
+   *   The built URL as a string.
+   */
+  protected static function createEntityUrl(EntityInterface $_entity, EntityInterface $original, array $highlight, RefinableCacheableDependencyInterface $cache_meta) : string {
+    $url = Url::fromRoute(
+      "entity.{$_entity->getEntityTypeId()}.iiif_p.canvas",
+      [
+        $_entity->getEntityTypeId() => $_entity->id(),
+        'canvas_type' => $original->getEntityTypeId(),
+        'canvas_id' => $original->id(),
+      ],
+      [
+        'fragment' => 'xywh=' . implode(',', [
+          $highlight['ulx'],
+          $highlight['uly'],
+          $highlight['lrx'] - $highlight['ulx'],
+          $highlight['lry'] - $highlight['uly'],
+        ]),
+      ]
+    )->setAbsolute();
+    $generated_url = $url->toString(TRUE);
+    $cache_meta->addCacheableDependency($generated_url);
+    return $generated_url->getGeneratedUrl();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public static function create(ContainerInterface $container) {
+    $instance = parent::create($container);
+
+    $instance->renderer = $container->get('renderer');
+
+    return $instance;
   }
 
 }

@@ -2,8 +2,8 @@
 
 namespace Drupal\iiif_content_search_api\Controller\V1;
 
+use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Url;
 use Drupal\iiif_content_search_api\Controller\AbstractSearchController;
 use Drupal\search_api\Query\ResultSetInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,27 +16,27 @@ class Search extends AbstractSearchController {
   /**
    * {@inheritDoc}
    */
-  public function processResults(EntityInterface $_entity, array $used, array $unused, int $result_count, int $page, int $page_size, int $max_page, ResultSetInterface $results, Request $request) : array {
+  public function processResults(EntityInterface $_entity, array $used, array $unused, int $result_count, int $page, int $page_size, int $max_page, ResultSetInterface $results, Request $request, RefinableCacheableDependencyInterface $cache_meta) : array {
     $data = [
       '@context' => 'http://iiif.io/api/presentation/2/context.json',
-      '@id' => static::createIdUrl($request, $used)->toString(),
+      '@id' => static::createIdUrlString($request, $used, $cache_meta),
       '@type' => 'sc:AnnotationList',
       'ignored' => array_keys($unused),
       'within' => [
-        'id' => static::createIdUrl($request, ['page' => FALSE] + $used)->toString(),
+        'id' => static::createIdUrlString($request, ['page' => FALSE] + $used, $cache_meta),
         '@type' => 'sc:Layer',
         'total' => $result_count,
-        'first' => static::createIdUrl($request, ['page' => 0] + $used)->toString(),
-        'last' => static::createIdUrl($request, ['page' => $max_page] + $used)->toString(),
+        'first' => static::createIdUrlString($request, ['page' => 0] + $used, $cache_meta),
+        'last' => static::createIdUrlString($request, ['page' => $max_page] + $used, $cache_meta),
       ],
       'startIndex' => $page_size * $page,
     ];
 
     if ($page > 0) {
-      $data['prev'] = static::createIdUrl($request, ['page' => $page - 1] + $used)->toString();
+      $data['prev'] = static::createIdUrlString($request, ['page' => $page - 1] + $used, $cache_meta);
     }
     if ($max_page > $page) {
-      $data['next'] = static::createIdUrl($request, ['page' => $page + 1] + $used)->toString();
+      $data['next'] = static::createIdUrlString($request, ['page' => $page + 1] + $used, $cache_meta);
     }
 
     $data['resources'] = [];
@@ -54,6 +54,8 @@ class Search extends AbstractSearchController {
 
       /** @var \Drupal\Core\Entity\ContentEntityInterface $original */
       $original = $adapter->getEntity();
+
+      $cache_meta->addCacheableDependency($original);
 
       if (!$original) {
         continue;
@@ -75,22 +77,7 @@ class Search extends AbstractSearchController {
                   '@type' => 'cnt:ContentAsText',
                   'chars' => $highlight['text'],
                 ],
-                'on' => Url::fromRoute(
-                  "entity.{$_entity->getEntityTypeId()}.iiif_p.canvas",
-                  [
-                    $_entity->getEntityTypeId() => $_entity->id(),
-                    'canvas_type' => $original->getEntityTypeId(),
-                    'canvas_id' => $original->id(),
-                  ],
-                  [
-                    'fragment' => 'xywh=' . implode(',', [
-                      $highlight['ulx'],
-                      $highlight['uly'],
-                      $highlight['lrx'] - $highlight['ulx'],
-                      $highlight['lry'] - $highlight['uly'],
-                    ]),
-                  ]
-                )->setAbsolute()->toString(),
+                'on' => static::createEntityUrl($_entity, $original, $highlight, $cache_meta),
               ];
             }
           }
