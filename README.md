@@ -43,6 +43,10 @@ This project has been sponsored by:
 
 * [discoverygarden](http://wwww.discoverygarden.ca)
 
+Sponsor:
+
+* [CTDA: Connecticut Digital Archive](https://lib.uconn.edu/find/connecticut-digital-archive/)
+
 ## Development
 
 If you would like to contribute to this module, please check out our helpful
